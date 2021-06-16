@@ -16,8 +16,9 @@
 
 (defparameter *lack-middleware-csrf*
   (lambda (app &key (block-app #'return-400) one-time
-            (session-key "_csrf_token")
-            (form-token "_csrf_token"))
+                 (session-key "_csrf_token")
+                 (form-token "_csrf_token")
+                 (session-name :lack.session))
     (lambda (env)
       (let ((*csrf-session-key* session-key)
             (*csrf-middleware-token* form-token))
@@ -25,7 +26,7 @@
           (unless (danger-method-p (getf env :request-method))
             (return (funcall app env)))
 
-          (let ((session (getf env :lack.session)))
+          (let ((session (getf env session-name)))
             (unless session
               (error ":lack.session is missing in ENV. Wrap this app up with lack.middleware.session"))
 
