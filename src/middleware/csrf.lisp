@@ -35,11 +35,11 @@
                   (when one-time
                     (remhash *csrf-session-key* session))
                   (funcall app env))
-                (funcall block-app env)))))))
+                (funcall block-app app env)))))))
   "Middleware for easy CSRF protection")
 
-(defun return-400 (env)
-  (declare (ignore env))
+(defun return-400 (app env)
+  (declare (ignore app env))
   '(400
     (:content-type "text/plain"
      :content-length 31)
