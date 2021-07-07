@@ -87,7 +87,7 @@
   "Generates a random token."
   (byte-array-to-hex-string
    (digest-sequence
-    (make-digest :SHA256)
+    (make-digest :SHA1)
     (ascii-string-to-byte-array
      (format nil "~A~A"
       (random 1.0) (get-universal-time))))))
