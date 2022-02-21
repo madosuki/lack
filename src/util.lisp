@@ -1,11 +1,10 @@
 (in-package :cl-user)
 (defpackage lack.util
   (:use :cl)
+  #+(or mswindows win32 cormanlisp)
   (:import-from :ironclad
-                :ascii-string-to-byte-array
                 :byte-array-to-hex-string
-                :digest-sequence
-                :make-digest)
+                :random-data)
   (:export :find-package-or-load
            :find-middleware
            :funcall-with-cb
@@ -22,17 +21,17 @@
     sym))
 
 (defun load-with-quicklisp (system)
-  (let* ((load-sym (locate-symbol '#:quickload '#:ql))
-         (error-sym (locate-symbol '#:system-not-found '#:ql)))
+  (let ((error-sym (locate-symbol '#:system-not-found '#:ql)))
     ;; We're going to trap on every condition, but only actually
     ;; handle ones of the type we're interested in. Conditions that we
     ;; don't explicitly handle will be propagated normally, because
     ;; HANDLER-BIND is cool like that.
     (handler-bind
         ((t (lambda (c)
-              (when (typep c error-sym)
+              (when (and (typep c error-sym)
+                         (string-equal system (uiop:symbol-call :ql :system-not-found-name c)))
                 (return-from load-with-quicklisp (values))))))
-      (funcall load-sym system :silent t))))
+      (uiop:symbol-call :ql :quickload system :silent t))))
 
 (defun find-package-or-load (package-name)
   (check-type package-name string)
@@ -83,11 +82,19 @@
           ((vector (unsigned-byte 8))
            (length body))))))
 
+;; cl-isaac supports ISAAC-64 solely for implementations with x86-64
+;; capabilities. Use whichever-best supported capability
+#-(or mswindows win32 cormanlisp)
+(defparameter *isaac-ctx*
+  (isaac:init-self-seed :count 5
+                        :is64 #+:X86-64 t #-:X86-64 nil))
+
 (defun generate-random-id ()
   "Generates a random token."
-  (byte-array-to-hex-string
-   (digest-sequence
-    (make-digest :SHA1)
-    (ascii-string-to-byte-array
-     (format nil "~A~A"
-      (random 1.0) (get-universal-time))))))
+  #+(or mswindows win32 cormanlisp)
+  (ironclad:byte-array-to-hex-string
+    (ironclad:random-data 20))
+  #-(or mswindows win32 cormanlisp)
+  (format nil "~(~40,'0x~)" (#+:X86-64 isaac:rand-bits-64
+                             #-:X86-64 isaac:rand-bits
+                             *isaac-ctx* 160)))
