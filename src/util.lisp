@@ -1,6 +1,7 @@
-(in-package :cl-user)
-(defpackage lack.util
+(defpackage lack/util
+  (:nicknames :lack.util)
   (:use :cl)
+  #+(or windows mswindows win32 cormanlisp)
   (:import-from :ironclad
                 :byte-array-to-hex-string
                 :random-data)
@@ -9,7 +10,7 @@
            :funcall-with-cb
            :content-length
            :generate-random-id))
-(in-package :lack.util)
+(in-package :lack/util)
 
 (defun locate-symbol (symbol pkg)
   (check-type symbol (or symbol string))
@@ -45,14 +46,21 @@
 
 (defun find-middleware (identifier)
   (let* ((package-name (concatenate 'string
-                                    #.(string '#:lack.middleware.)
-                                    (substitute #\. #\- (symbol-name identifier))))
-         (package (find-package-or-load package-name)))
+                                    #.(string '#:lack/middleware/)
+                                    (symbol-name identifier)))
+         (backward-compatible-package-name
+           (concatenate 'string
+                        #.(string '#:lack.middleware.)
+                        (substitute #\. #\- (symbol-name identifier))))
+         (package (or (find-package-or-load package-name)
+                      (find-package-or-load backward-compatible-package-name))))
     (unless package
       (error "Middleware ~S is not found" package-name))
     (let ((mw-symbol (intern (format nil "*~A*"
-                                     (substitute #\- #\. package-name
-                                                 :test #'char=))
+                                     (substitute-if #\-
+                                                    (lambda (c)
+                                                      (member c '(#\. #\/) :test 'char=))
+                                                    package-name))
                              package)))
       (if (and (boundp mw-symbol)
                (functionp (symbol-value mw-symbol)))
@@ -81,7 +89,19 @@
           ((vector (unsigned-byte 8))
            (length body))))))
 
+;; cl-isaac supports ISAAC-64 solely for implementations with x86-64
+;; capabilities. Use whichever-best supported capability
+#-(or windows mswindows win32 cormanlisp)
+(defparameter *isaac-ctx*
+  (isaac:init-self-seed :count 5
+                        :is64 #+:X86-64 t #-:X86-64 nil))
+
 (defun generate-random-id ()
   "Generates a random token."
+  #+(or windows mswindows win32 cormanlisp)
   (ironclad:byte-array-to-hex-string
-    (ironclad:random-data 20)))
+    (ironclad:random-data 20))
+  #-(or windows mswindows win32 cormanlisp)
+  (format nil "~(~40,'0x~)" (#+:X86-64 isaac:rand-bits-64
+                             #-:X86-64 isaac:rand-bits
+                             *isaac-ctx* 160)))
