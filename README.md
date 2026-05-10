@@ -124,7 +124,7 @@ In case of that you would prefer a stream to a function, `lack/util/writer-strea
 (lambda (env)
   (lambda (responder)
     (let* ((writer (funcall responder '(200 (:content-type "application/json"))))
-           (stream (make-writer-function writer)))
+           (stream (make-writer-stream writer)))
       (loop for chunk = (fetch-something)
             do (write-sequence chunk stream)
             while chunk
@@ -322,6 +322,17 @@ Running 10s test @ http://127.0.0.1:5000
 Requests/sec:   4252.68
 Transfer/sec:      1.10MB
 ```
+
+## Frameworks built on Clack/Lack
+
+* [Caveman2](https://github.com/fukamachi/caveman) - Inactive, but commonly used
+* [Vinland](https://github.com/lisplizards/vinland)
+* [Reblocks](https://github.com/40ants/reblocks)
+* [ningle](https://github.com/fukamachi/ningle) - Super micro web framework
+* [jingle](https://github.com/dnaeon/cl-jingle)
+* [Ninglex](https://github.com/defunkydrummer/ninglex)
+* [Utopian](https://github.com/fukamachi/utopian) - Experimental
+* [Lucerne](https://github.com/eudoxia0/lucerne) - Not maintained anymore
 
 ## Author
 

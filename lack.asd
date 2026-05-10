@@ -74,7 +74,9 @@
                  (:file "accesslog")))
                (:module "session"
                 :components
-                ((:module "store"
+                ((:file "store")
+                 (:module "store-backends"
+                  :pathname "store"
                   :components
                   ((:file "dbi")
                    #+todo
